@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+from corsheaders.defaults import default_headers
 from pathlib import Path
 from decouple import config, Csv
 import os
@@ -62,7 +63,7 @@ ROOT_URLCONF = 'config.endpoints'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -135,15 +136,15 @@ MONCASH_SECRET_KEY = config('MONCASH_SECRET_KEY')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.BasicAuthentication',
+        'config.authentication.SafeJWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'config.permissions.IsAuthenticated',
     ],
     # 'DATETIME_FORMAT':'%s',
     'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle'
+        'config.throttling.SafeAnonRateThrottle',
+        'config.throttling.SafeUserRateThrottle'
     ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '30/minute',
@@ -158,4 +159,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:41739",
     "http://127.0.0.1",
     'http://192.168.1.144:8080',
+]
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'X-Client-ID',
 ]

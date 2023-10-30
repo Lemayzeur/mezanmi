@@ -1,0 +1,13 @@
+curl -X POST http://127.0.0.1:9007/api/v1/token/ -H "X-Client-ID:  SEE4MzJTSmpkanMyMzowMjNtQUpqNDM4NG1manNkODIzNG1jZGtmc2ozNGtkZms="
+
+curl -X POST http://127.0.0.1:9007/api/v1/token/refresh/ -d "refresh_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTY5ODY5MDU3NywiaWF0IjoxNjk4NjA0MTc3LCJqdGkiOiIzNTcxODExMjY0N2M0MmI0OTk2YmY0YjRkYTBkYWRkYiIsImNsaWVudF9pZCI6IkhBODMyU0pqZGpzMjMifQ.WajV6bAYHbhYNgN7YB1kNzastZbfOjmgmweHtwZFZYw"
+
+curl -X POST http://127.0.0.1:9007/api/v1/token/verify/ -d "access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjk4NjE5Mjk5LCJpYXQiOjE2OTg2MTg5OTksImp0aSI6IjEyYTkyZWVjOTNkMjQzOTVhOTFhZmE3ZTJiMmUzODcyIiwiY2xpZW50X2lkIjoiSEE4MzJTSmpkanMyMyJ9.KNSg9JBgMyxsFAQKCzducqXRON4WE30xuAWCQ8d-_os"
+
+curl -X POST http://127.0.0.1:9007/api/v1/payments/ -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjk4NjY3MDY1LCJpYXQiOjE2OTg2NjY3NjUsImp0aSI6IjczNzkyZmU2MTU0MzRkNThhYzU0OWFmMGM5NzUzZjdjIiwiY2xpZW50X2lkIjoiSEE4MzJTSmpkanMyMyJ9.CJKN0SD8WqfhiK1PL21RFXiV9AByvaQNKV25ifNWhnw" -d "amount=20"
+
+curl -X POST http://127.0.0.1:9007/api/v1/payments/ -d "amount=20"
+
+
+
+{"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjk4NTkzNjI1LCJpYXQiOjE2OTg1OTMzMjUsImp0aSI6IjZhNmZmY2M3NWE2ZjRiMDg4YWFhNTg4OWIxNWJiMTgzIiwiY2xpZW50X2lkIjoiSEE4MzJTSmpkanMyMyJ9.zgMg03KZYnUGXFJhxqk4ABCmUFcWZPvmoLeL5fA8xVM","refresh_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTY5ODY3OTcyNSwiaWF0IjoxNjk4NTkzMzI1LCJqdGkiOiJlMTlhOTY1OWJjNDk0MTAxOTk2YTY5OTllNzcxOTc5MiIsImNsaWVudF9pZCI6IkhBODMyU0pqZGpzMjMifQ.e3wfhe0DTSVlbsK8X4wgbIAVEKorHrYJmNY7I4Bp-_Q","lifetime":300}
