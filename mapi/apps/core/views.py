@@ -44,7 +44,7 @@ def get_api_info(request):
     
     # Example usage:
     exchange_rate_backend = ExchangeRateBackend()
-    result = exchange_rate_backend.engine('USD')
+    result = exchange_rate_backend.engine('USD', system='brh')
     print('DIRI:', result)
 
     # 10 USD

@@ -154,9 +154,15 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 EXCHANGE_RATE = {
     'ALLOWED_BACKENDS': [
         'config.exchange_rate.ExchangeRateBackend',
-        'config.exchange_rate.CustomExchangeRate',
     ],
     'PATH': BASE_DIR / '.rate',
-    'API_KEY': config("EXCHANGE_RATE_API_KEY")
+    'API_KEY': config("EXCHANGE_RATE_API_KEY"),
+    'SYSTEM': 'CUSTOM', # it can be 'CUSTOM', 'BRH', or 'API'
     # Get an API KEY here: https://app.exchangerate-api.com/
+    'CUSTOM': {
+        'HTG': 1,
+        'USD': 134.4502,
+        'EUR': 135.3400,
+    }
+    
 }

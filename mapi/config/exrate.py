@@ -90,7 +90,7 @@ class ExchangeRateBackend:
         # Save the new rate data
         self._save_rate()
 
-    def _rate_via_api(self, _from, to):
+    def _rate_via_api(self, _from):
         today = timezone.now()
         saved_data = self._load_saved_rate()
 
@@ -106,8 +106,8 @@ class ExchangeRateBackend:
             response = requests.get(api_url)
             data = response.json()
 
-            # Extract the exchange rate for a specific currency (e.g., EUR)
-            exchange_rate = data['conversion_rates'].get(to.upper())
+            # Extract the exchange rate for a specific currency
+            exchange_rate = data['conversion_rates'].get('HTG')
 
             if exchange_rate is not None:
                 self._response['api_rate'] = {
@@ -120,18 +120,23 @@ class ExchangeRateBackend:
         except Exception as e:
             print(f"Error fetching exchange rate from API: {e}")
 
+    def _rate_via_custom(self, _from):
+        self._response['api_rate'] = {
+            'rate': settings.EXCHANGE_RATE['CUSTOM'][_from],
+        }
 
-    def engine(self, _from='USD'):
-        to = 'HTG'
-        # self._rate_via_brh()
-        self._rate_via_api(_from=_from, to=to)
+    def engine(self, _from='USD', system=settings.EXCHANGE_RATE['SYSTEM']):
+        # Define a dictionary to map functions based on the provided arguments
+        rate_functions = {
+            '_rate_via_brh': self._rate_via_brh,
+            '_rate_via_api': lambda: self._rate_via_api(_from),
+            '_rate_via_custom': lambda: self._rate_via_custom(_from),
+        }
+
+        if system == 'CUSTOM' and settings.EXCHANGE_RATE.get('CUSTOM') is None:
+            raise AttributeError('CUSTOM key is missing in EXCHANGE_RATE')
+
+        # Call the appropriate function based on the provided argument
+        rate_functions.get(f'_rate_via_{system.lower()}', lambda: None)()
 
         return self._response['api_rate']['rate']
-
-class CustomExchangeRate:
-    def engine(self):
-        return {
-            'htg': 1,
-            'usd': 134.4502,
-            'euro': 135.3400,
-        }
