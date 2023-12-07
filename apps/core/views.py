@@ -32,13 +32,25 @@ from config.utils import (
     is_valid_haiti_phone_number,
     is_valid_amount,
 )
+from config.exrate import ExchangeRateBackend
 
 import re
 import json
 import moncashify
+import moncashify.errors
 
 @api_view(['GET'])
 def get_api_info(request):
+    
+    # Example usage:
+    exchange_rate_backend = ExchangeRateBackend()
+    result = exchange_rate_backend.engine('USD')
+    print('DIRI:', result)
+
+    # 10 USD
+
+    
+
     data = {
         'title': 'Mezanmi Tech API',
         'version': 'v1',
@@ -58,6 +70,8 @@ class TokenObtainView(views.APIView):
     @method_decorator(extract_client_credentials)
     def post(self, request, client_id, client_secret):
         # Verify client credentials
+
+        # TODO: Verification will come from a third secure server instead
         client = Client.objects.filter(client_id=client_id, enabled=True).first()
 
         if not client or client.client_secret != client_secret:
@@ -84,7 +98,7 @@ class TokenRefreshView(views.APIView):
         refresh_token = request.data.get('refresh_token')
 
         if not refresh_token:
-            return Response({'error': 'Refresh token is required'}, status=status.HTTP_BAD_REQUEST)
+            return Response({'error': 'Refresh token is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             # Decode the refresh token
@@ -92,7 +106,7 @@ class TokenRefreshView(views.APIView):
             # Create a new access token
             new_access_token = refresh.access_token
         except Exception as e:
-            return Response({'error': 'Invalid refresh token'}, status=status.HTTP_BAD_REQUEST)
+            return Response({'error': 'Invalid refresh token'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Return the new access token
         return Response({'access_token': str(new_access_token)})
@@ -116,35 +130,35 @@ class TokenVerifyView(views.APIView):
             # Token is invalid
             return Response({'valid': False}, status=status.HTTP_200_OK)
 
-# Create Payment Transaction
 class PaymentView(views.APIView):
-    permission_classes = []
+    '''Create Payment Transaction'''
+    permission_classes = [] # TODO: Pa bliye retire sa, pou pwoteje view a.
 
     def post(self, request):
-        data = request.data
-        reference_id = data.get('reference_id', 'test1234')
+        data = request.data # body of the request
+
+        # Get mandatory data from the body
+        reference_id = data.get('reference_id')
         amount = data.get('amount')
-        currency = data.get('currency')
-        phone_number = data.get('phone_number', '')
+        currency = data.get('currency', 'HTG') # by default, it's HTG
 
         if amount and reference_id:
             try:
                 if not is_valid_amount(amount):
                     raise InvalidAmountError()
 
-                amount = float(amount)
+                # get the exchange rate value in HTG
+                exchange_rate_backend = ExchangeRateBackend()
+                rate_value = exchange_rate_backend.engine(currency)
+
+                # Amount in HTG
+                amount = round( float(amount) * rate_value, 2)
 
                 if amount == 0:
                     raise ZeroAmountError()
 
                 if amount < 0:
                     raise NegativeAmountError()
-
-                if phone_number == 8:
-                    phone_number = '509' + phone_number
-
-                if not is_valid_haiti_phone_number(phone_number):
-                    raise InvalidRecipientError("Recipient is not a valid Haiti phone number.")
 
                 moncash = moncashify.API(
                     settings.MONCASH_CLIENT_ID, 
@@ -175,18 +189,56 @@ class PaymentView(views.APIView):
             except InvalidRecipientError as e:
                 error = json.loads(str(e))
                 return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            except moncashify.errors.TokenError as e:
+                print(e)
+                return Response(status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({"error": "Missing required data"}, status=status.HTTP_400_BAD_REQUEST)
 
-# Process Payment
-@csrf_exempt
-@api_view(['POST'])
-def process_payment(request, payment_id):
-    try:
-        payment = Payment.objects.get(pk=payment_id)
-        # Perform payment processing (charge the user's account, etc.)
-        payment.status = 'completed'
-        payment.save()
-        return JsonResponse({"message": "Payment processed successfully"})
-    except Payment.DoesNotExist:
-        return JsonResponse({"error": "Payment not found"}, status=404)
+class PaymentProcessView(views.APIView):
+    def post(self, request):
+        transaction_id = request.data.get(settings.MONCASH_QUERY_KEY)
+
+        # Check the status of the transaction from the provider
+        try:
+            # details = {'path': '/Api/v1/RetrieveTransactionPayment', 'payment': {'reference': '128b8dc1339', 'transactionId': '5766988876', 'cost': 1, 'message': 'successful', 'payer': '50938747485'}, 'timestamp': 1628890717030, 'status': 200} 
+            moncash = moncashify.API(
+                settings.MONCASH_CLIENT_ID, 
+                settings.MONCASH_SECRET_KEY, 
+                debug=settings.DEBUG
+            )
+            details = moncash.transaction_details(transaction_id=transaction_id)
+                
+            # See Moncashify details response example, here: 
+            return Response(details)
+
+        except moncashify.errors.TokenError as e:
+            return Response(status=status.HTTP_401_UNAUTHORIZED) 
+        except Exception as e:
+            return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class PaymentVerifyView(views.APIView):
+    def post(self, request, transaction_id):
+        id = request.data.get(settings.MONCASH_QUERY_KEY)
+        _type = request.data.get('type')
+
+        # Check the status of the transaction from the provider
+        try:
+            # details = {'path': '/Api/v1/RetrieveTransactionPayment', 'payment': {'reference': '128b8dc1339', 'transactionId': '5766988876', 'cost': 1, 'message': 'successful', 'payer': '50938747485'}, 'timestamp': 1628890717030, 'status': 200} 
+            moncash = moncashify.API(
+                settings.MONCASH_CLIENT_ID, 
+                settings.MONCASH_SECRET_KEY, 
+                debug=settings.DEBUG
+            )
+            if _type == 'order_id':
+                details = moncash.transaction_details(order_id=id)
+            else:
+                details = moncash.transaction_details(transaction_id=id)
+            
+            # See Moncashify details response example, here: 
+            return Response(details)
+
+        except moncashify.errors.TokenError as e:
+            return Response(status=status.HTTP_401_UNAUTHORIZED) 
+        except Exception as e:
+            return Response(status=status.HTTP_400_BAD_REQUEST)

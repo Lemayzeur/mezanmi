@@ -14,5 +14,6 @@ urlpatterns = [
     path('token/verify/', views.TokenVerifyView.as_view()),
 
     path('payments/', views.PaymentView.as_view(), name='create_payment'),
-    path('payments/<int:payment_id>/process', views.process_payment, name='process_payment'),
+    path('payments/process/', views.PaymentProcessView.as_view(), name='process_payment'),
+    path('payments/verify/', views.PaymentVerifyView.as_view(), name='process_payment'),
 ]

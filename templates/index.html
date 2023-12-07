@@ -6,31 +6,50 @@
 	<title>Mezanmi Tech Index</title>
 	<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 </head>
-<body class="container">
+<body class="container" style="background-color: #333;color: #fff">
 	<br>
-	<p>Client ID: | Client secret: </p>
-	<h5>Access token: </h5>
-	<button>Authenticate</button>
-	<button>Refresh token</button>
+    <a href="/swagger/">View API Documentation</a><br><br>
+	<div class='row'>
+    <div class='col-7'>
+      <p><strong>Client ID: </strong><span style='color: #aaa' id="clientIDContainer"></span><br><strong>Client secret: </strong> <span style='color: #aaa' id="clientSecretContainer"></span></p>
+      <p style="word-wrap: break-word;"><span id='tokenContainer'><strong>Access token:</strong> ----</span></p>
+      <button type='button' class="btn btn-sm btn-secondary" id='getTokenButton'>Authenticate</button>
+      <button type='button' class="btn btn-sm btn-secondary" id='refreshTokenButton'>Refresh token</button>
 
-	<main class="form-signin w-100 m-auto">
-		
-			<hr />
-	  <form action="/api/v1/payments/" method="post">{% csrf_token %}
-	    <h1 class="h3 mb-3 fw-normal">Moncash Test</h1>
+      <hr>
 
-	    <div class="form-floating">
-	      <input type="text" name='reference_id' class="form-control" id="id_reference_id" placeholder="Reference ID">
-	      <label for="id_reference_id">Reference ID</label>
-	    </div>
-	    <div class="form-floating">
-	      <input type="text" name='amount' class="form-control" id="id_amount" placeholder="Amount">
-	      <label for="id_amount">Amount</label>
-	    </div>
+      <form action="/api/v1/payments/" method="post">{% csrf_token %}
+        <h1 class="h3 mb-3 fw-normal">Moncash Test</h1>
+        <div class="form-floating mb-2">
+          <select class="form-select" name="currency">
+            <option selected value="htg">HTG</option>
+            <option value="usd">USD</option>
+            <option value="euro">Euro</option>
+          </select>
+          <label for="currency">Currency</label>
+        </div>
+        <div class="form-floating mb-2">
+          <input type="text" name='amount' class="form-control" id="id_amount" placeholder="Amount">
+          <label for="id_amount">Amount</label>
+        </div>
 
-	    <button class="btn btn-secondary w-100 py-2 mt-3" type="submit">Proceed Payment</button>
-	  </form>
-	</main>
+        <div class="form-floating mb-3">
+          <input type="text" name='reference_id' class="form-control" id="id_reference_id" placeholder="Reference ID">
+          <label for="id_reference_id">Reference ID</label>
+        </div>
+        
+
+        <button class="btn btn-secondary w-100 py-2" type="submit">Proceed Payment</button>
+      </form>
+    </div>
+    <div class='col-4'>
+      <div  style='display: none;word-wrap: break-word;' class='alert alert-danger' id='statusContainer'>
+        
+      </div>
+    </div>
+  </div>
+
+	  
 
 	<style>
       .bd-placeholder-img {
@@ -136,5 +155,161 @@
 		  border-top-right-radius: 0;
 		}
     </style>
+
+    <script type="text/javascript">
+      
+      let apiUrl = 'http://127.0.0.1:8000/api/v1';
+
+      let clientID = 'HA832SJjdjs23',
+        clientSecret = '023mAJj4384mfjsd8234mcdkfsj34kdfk';
+
+      let accessToken, refreshToken;
+
+      let submitButtonBusy = false;
+
+      document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        const getTokenButton = document.getElementById('getTokenButton');
+        const refreshTokenButton = document.getElementById('refreshTokenButton');
+        const tokenContainer = document.getElementById('tokenContainer');
+        const statusContainer = document.getElementById('statusContainer');
+        const clientIDContainer = document.getElementById('clientIDContainer');
+        const clientSecretContainer = document.getElementById('clientSecretContainer');
+
+        const submitButton = document.querySelector('form button[type=submit]');
+
+        clientIDContainer.innerText = clientID;
+        clientSecretContainer.innerText = clientSecret;
+
+        function setButtonState(state) {
+            if(state === 'disabled') {
+                submitButton.classList.add('disabled')
+                submitButton.setAttribute('disabled', 'disabled')
+                submitButton.innerText = 'Please wait...'
+                submitButtonBusy = true;
+            } else {
+                submitButton.classList.remove('disabled')
+                submitButton.removeAttribute('disabled')
+                submitButton.innerText = 'Proceed Payment'
+                submitButtonBusy = false;
+            }
+        }
+
+        // Separate reusable functions
+        function displayStatus(message, isSuccess) {
+            statusContainer.style.display = 'block';
+            statusContainer.innerText = message;
+            statusContainer.classList.remove(isSuccess ? 'alert-danger' : 'alert-success');
+            statusContainer.classList.add(isSuccess ? 'alert-success' : 'alert-danger');
+        }
+
+        function handleAjaxError(response) {
+            return response.json().then(data => {
+                throw new Error(data.error?.message || data.error || response.statusText);
+            });
+        }
+
+        getTokenButton.addEventListener('click', () => {
+          statusContainer.style.display = 'none';
+            // Make an AJAX request to obtain a token
+            fetch(apiUrl + '/token/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Client-ID': btoa(`${clientID}:${clientSecret}`)
+                },
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    return response.json().then(data => {
+                      // Handle the JSON response for 400 or 401 status codes
+                      throw new Error(data.error.message || data.error || response.statusText);
+                    }).catch(error => {
+                        // Handle any errors from parsing the JSON response
+                        throw new Error(response.statusText);
+                    });
+                }
+            })
+            .then(data => {
+                // Display the token in the tokenContainer
+                tokenContainer.innerHTML = '<strong>Access Token:</strong> ' + data.access_token;
+                accessToken = data.access_token;
+                refreshToken = data.refresh_token;
+            })
+            .catch(error => {
+                displayStatus(error, false);
+            });
+        });
+
+        refreshTokenButton.addEventListener('click', () => {
+          statusContainer.style.display = 'none';
+            // Make an AJAX request to refresh the token
+            fetch(apiUrl + '/token/refresh/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    refresh_token: refreshToken, // Replace with your refresh token
+                }),
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    return handleAjaxError(response);
+                }
+            })
+            .then(data => {
+                // Display the new token in the tokenContainer
+                tokenContainer.innerHTML = '<strong>Access Token (Refreshed):</strong> ' + data.access_token;
+                accessToken = data.access_token;
+            })
+            .catch(error => {
+              displayStatus(error, false);
+            });
+        });
+
+        form.addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            if(!submitButtonBusy) {
+                setButtonState('disabled')
+
+                // Get the form data
+                const formData = new FormData(form);
+
+                // Make an AJAX request
+                fetch(apiUrl + '/payments/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json(); // Parse JSON response
+                    } else {
+                       return handleAjaxError(response);
+                    }
+                })
+                .then(data => {
+                    displayStatus('MonCash URL: ' + data.redirect_url, true);
+                    setButtonState('enabled')
+                })
+                .catch(error => {
+                    displayStatus(error, false);
+                    setButtonState('enabled')
+                });
+            }
+        });
+    });
+
+
+
+    </script>
 </body>
 </html>

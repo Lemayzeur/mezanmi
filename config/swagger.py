@@ -9,7 +9,7 @@ from drf_yasg import openapi
 schema_view = get_schema_view(
     openapi.Info(
         title="Mezanmi Tech MonCash Payment API",
-        default_version='v1',
+        default_version='V.1',
         description="MonCash Payment API built by Code9Dev",
         terms_of_service="https://www.google.com/policies/terms/",
         contact=openapi.Contact(email="info@mezanmi.local"),
